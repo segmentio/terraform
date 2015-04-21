@@ -1,292 +1,292 @@
 package aws
 
 import (
-        "fmt"
-        "reflect"
-        "testing"
+	"fmt"
+	"reflect"
+	"testing"
 
-        "github.com/awslabs/aws-sdk-go/aws"
-        "github.com/awslabs/aws-sdk-go/service/ec2"
-        "github.com/hashicorp/terraform/helper/resource"
-        "github.com/hashicorp/terraform/terraform"
+	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 func TestIpPermissionIDHash(t *testing.T) {
-        simple := &ec2.IPPermission{
-                IPProtocol: aws.String("tcp"),
-                FromPort:   aws.Long(int64(80)),
-                ToPort:     aws.Long(int64(8000)),
-                IPRanges: []*ec2.IPRange{
-                        &ec2.IPRange{
-                                CIDRIP: aws.String("10.0.0.0/8"),
-                        },
-                },
-        }
+	simple := &ec2.IPPermission{
+		IPProtocol: aws.String("tcp"),
+		FromPort:   aws.Long(int64(80)),
+		ToPort:     aws.Long(int64(8000)),
+		IPRanges: []*ec2.IPRange{
+			&ec2.IPRange{
+				CIDRIP: aws.String("10.0.0.0/8"),
+			},
+		},
+	}
 
-        egress := &ec2.IPPermission{
-                IPProtocol: aws.String("tcp"),
-                FromPort:   aws.Long(int64(80)),
-                ToPort:     aws.Long(int64(8000)),
-                IPRanges: []*ec2.IPRange{
-                        &ec2.IPRange{
-                                CIDRIP: aws.String("10.0.0.0/8"),
-                        },
-                },
-        }
+	egress := &ec2.IPPermission{
+		IPProtocol: aws.String("tcp"),
+		FromPort:   aws.Long(int64(80)),
+		ToPort:     aws.Long(int64(8000)),
+		IPRanges: []*ec2.IPRange{
+			&ec2.IPRange{
+				CIDRIP: aws.String("10.0.0.0/8"),
+			},
+		},
+	}
 
-        egress_all := &ec2.IPPermission{
-                IPProtocol: aws.String("-1"),
-                IPRanges: []*ec2.IPRange{
-                        &ec2.IPRange{
-                                CIDRIP: aws.String("10.0.0.0/8"),
-                        },
-                },
-        }
+	egress_all := &ec2.IPPermission{
+		IPProtocol: aws.String("-1"),
+		IPRanges: []*ec2.IPRange{
+			&ec2.IPRange{
+				CIDRIP: aws.String("10.0.0.0/8"),
+			},
+		},
+	}
 
-        // hardcoded hashes, to detect future change
-        cases := []struct {
-                Input  *ec2.IPPermission
-                Type   string
-                Output string
-        }{
-                {simple, "ingress", "sg-82613597"},
-                {egress, "egress", "sg-363054720"},
-                {egress_all, "egress", "sg-857124156"},
-        }
+	// hardcoded hashes, to detect future change
+	cases := []struct {
+		Input  *ec2.IPPermission
+		Type   string
+		Output string
+	}{
+		{simple, "ingress", "sg-82613597"},
+		{egress, "egress", "sg-363054720"},
+		{egress_all, "egress", "sg-857124156"},
+	}
 
-        for _, tc := range cases {
-                actual := ipPermissionIDHash(tc.Type, tc.Input)
-                if actual != tc.Output {
-                        t.Fatalf("input: %s - %#v\noutput: %s", tc.Type, tc.Input, actual)
-                }
-        }
+	for _, tc := range cases {
+		actual := ipPermissionIDHash(tc.Type, tc.Input)
+		if actual != tc.Output {
+			t.Fatalf("input: %s - %#v\noutput: %s", tc.Type, tc.Input, actual)
+		}
+	}
 }
 
 func TestAccAWSSecurityGroupRule_Ingress(t *testing.T) {
-        var group ec2.SecurityGroup
+	var group ec2.SecurityGroup
 
-        testRuleCount := func(*terraform.State) error {
-                if len(group.IPPermissions) != 1 {
-                        return fmt.Errorf("Wrong Security Group rule count, expected %d, got %d",
-                                1, len(group.IPPermissions))
-                }
+	testRuleCount := func(*terraform.State) error {
+		if len(group.IPPermissions) != 1 {
+			return fmt.Errorf("Wrong Security Group rule count, expected %d, got %d",
+				1, len(group.IPPermissions))
+		}
 
-                rule := group.IPPermissions[0]
-                if *rule.FromPort != int64(80) {
-                        return fmt.Errorf("Wrong Security Group port setting, expected %d, got %d",
-                                80, int(*rule.FromPort))
-                }
+		rule := group.IPPermissions[0]
+		if *rule.FromPort != int64(80) {
+			return fmt.Errorf("Wrong Security Group port setting, expected %d, got %d",
+				80, int(*rule.FromPort))
+		}
 
-                return nil
-        }
+		return nil
+	}
 
-        resource.Test(t, resource.TestCase{
-                PreCheck:     func() { testAccPreCheck(t) },
-                Providers:    testAccProviders,
-                CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
-                Steps: []resource.TestStep{
-                        resource.TestStep{
-                                Config: testAccAWSSecurityGroupRuleIngressConfig,
-                                Check: resource.ComposeTestCheckFunc(
-                                        testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
-                                        testAccCheckAWSSecurityGroupRuleAttributes(&group, "ingress"),
-                                        resource.TestCheckResourceAttr(
-                                                "aws_security_group_rule.ingress_1", "from_port", "80"),
-                                        testRuleCount,
-                                ),
-                        },
-                },
-        })
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccAWSSecurityGroupRuleIngressConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
+					testAccCheckAWSSecurityGroupRuleAttributes(&group, "ingress"),
+					resource.TestCheckResourceAttr(
+						"aws_security_group_rule.ingress_1", "from_port", "80"),
+					testRuleCount,
+				),
+			},
+		},
+	})
 }
 
 func TestAccAWSSecurityGroupRule_IngressClassic(t *testing.T) {
-        var group ec2.SecurityGroup
+	var group ec2.SecurityGroup
 
-        testRuleCount := func(*terraform.State) error {
-                if len(group.IPPermissions) != 1 {
-                        return fmt.Errorf("Wrong Security Group rule count, expected %d, got %d",
-                                1, len(group.IPPermissions))
-                }
+	testRuleCount := func(*terraform.State) error {
+		if len(group.IPPermissions) != 1 {
+			return fmt.Errorf("Wrong Security Group rule count, expected %d, got %d",
+				1, len(group.IPPermissions))
+		}
 
-                rule := group.IPPermissions[0]
-                if *rule.FromPort != int64(80) {
-                        return fmt.Errorf("Wrong Security Group port setting, expected %d, got %d",
-                                80, int(*rule.FromPort))
-                }
+		rule := group.IPPermissions[0]
+		if *rule.FromPort != int64(80) {
+			return fmt.Errorf("Wrong Security Group port setting, expected %d, got %d",
+				80, int(*rule.FromPort))
+		}
 
-                return nil
-        }
+		return nil
+	}
 
-        resource.Test(t, resource.TestCase{
-                PreCheck:     func() { testAccPreCheck(t) },
-                Providers:    testAccProviders,
-                CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
-                Steps: []resource.TestStep{
-                        resource.TestStep{
-                                Config: testAccAWSSecurityGroupRuleIngressClassicConfig,
-                                Check: resource.ComposeTestCheckFunc(
-                                        testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
-                                        testAccCheckAWSSecurityGroupRuleAttributes(&group, "ingress"),
-                                        resource.TestCheckResourceAttr(
-                                                "aws_security_group_rule.ingress_1", "from_port", "80"),
-                                        testRuleCount,
-                                ),
-                        },
-                },
-        })
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccAWSSecurityGroupRuleIngressClassicConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
+					testAccCheckAWSSecurityGroupRuleAttributes(&group, "ingress"),
+					resource.TestCheckResourceAttr(
+						"aws_security_group_rule.ingress_1", "from_port", "80"),
+					testRuleCount,
+				),
+			},
+		},
+	})
 }
 
 func TestAccAWSSecurityGroupRule_MultiIngress(t *testing.T) {
-        var group ec2.SecurityGroup
+	var group ec2.SecurityGroup
 
-        testMultiRuleCount := func(*terraform.State) error {
-                if len(group.IPPermissions) != 3 {
-                        return fmt.Errorf("Wrong Security Group rule count, expected %d, got %d",
-                                3, len(group.IPPermissions))
-                }
+	testMultiRuleCount := func(*terraform.State) error {
+		if len(group.IPPermissions) != 3 {
+			return fmt.Errorf("Wrong Security Group rule count, expected %d, got %d",
+				3, len(group.IPPermissions))
+		}
 
-                var rule *ec2.IPPermission
-                for _, r := range group.IPPermissions {
-                        if *r.FromPort == int64(80) {
-                                rule = r
-                        }
-                }
+		var rule *ec2.IPPermission
+		for _, r := range group.IPPermissions {
+			if *r.FromPort == int64(80) {
+				rule = r
+			}
+		}
 
-                if *rule.ToPort != int64(8000) {
-                        return fmt.Errorf("Wrong Security Group port 2 setting, expected %d, got %d",
-                                8000, int(*rule.ToPort))
-                }
+		if *rule.ToPort != int64(8000) {
+			return fmt.Errorf("Wrong Security Group port 2 setting, expected %d, got %d",
+				8000, int(*rule.ToPort))
+		}
 
-                return nil
-        }
+		return nil
+	}
 
-        resource.Test(t, resource.TestCase{
-                PreCheck:     func() { testAccPreCheck(t) },
-                Providers:    testAccProviders,
-                CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
-                Steps: []resource.TestStep{
-                        resource.TestStep{
-                                Config: testAccAWSSecurityGroupRuleConfigMultiIngress,
-                                Check: resource.ComposeTestCheckFunc(
-                                        testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
-                                        testMultiRuleCount,
-                                ),
-                        },
-                },
-        })
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccAWSSecurityGroupRuleConfigMultiIngress,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
+					testMultiRuleCount,
+				),
+			},
+		},
+	})
 }
 
 func TestAccAWSSecurityGroupRule_Egress(t *testing.T) {
-        var group ec2.SecurityGroup
+	var group ec2.SecurityGroup
 
-        resource.Test(t, resource.TestCase{
-                PreCheck:     func() { testAccPreCheck(t) },
-                Providers:    testAccProviders,
-                CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
-                Steps: []resource.TestStep{
-                        resource.TestStep{
-                                Config: testAccAWSSecurityGroupRuleEgressConfig,
-                                Check: resource.ComposeTestCheckFunc(
-                                        testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
-                                        testAccCheckAWSSecurityGroupRuleAttributes(&group, "egress"),
-                                ),
-                        },
-                },
-        })
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSSecurityGroupRuleDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccAWSSecurityGroupRuleEgressConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSSecurityGroupRuleExists("aws_security_group.web", &group),
+					testAccCheckAWSSecurityGroupRuleAttributes(&group, "egress"),
+				),
+			},
+		},
+	})
 }
 
 func testAccCheckAWSSecurityGroupRuleDestroy(s *terraform.State) error {
-        conn := testAccProvider.Meta().(*AWSClient).ec2conn
+	conn := testAccProvider.Meta().(*AWSClient).ec2conn
 
-        for _, rs := range s.RootModule().Resources {
-                if rs.Type != "aws_security_group" {
-                        continue
-                }
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "aws_security_group" {
+			continue
+		}
 
-                // Retrieve our group
-                req := &ec2.DescribeSecurityGroupsInput{
-                        GroupIDs: []*string{aws.String(rs.Primary.ID)},
-                }
-                resp, err := conn.DescribeSecurityGroups(req)
-                if err == nil {
-                        if len(resp.SecurityGroups) > 0 && *resp.SecurityGroups[0].GroupID == rs.Primary.ID {
-                                return fmt.Errorf("Security Group (%s) still exists.", rs.Primary.ID)
-                        }
+		// Retrieve our group
+		req := &ec2.DescribeSecurityGroupsInput{
+			GroupIDs: []*string{aws.String(rs.Primary.ID)},
+		}
+		resp, err := conn.DescribeSecurityGroups(req)
+		if err == nil {
+			if len(resp.SecurityGroups) > 0 && *resp.SecurityGroups[0].GroupID == rs.Primary.ID {
+				return fmt.Errorf("Security Group (%s) still exists.", rs.Primary.ID)
+			}
 
-                        return nil
-                }
+			return nil
+		}
 
-                ec2err, ok := err.(aws.APIError)
-                if !ok {
-                        return err
-                }
-                // Confirm error code is what we want
-                if ec2err.Code != "InvalidGroup.NotFound" {
-                        return err
-                }
-        }
+		ec2err, ok := err.(aws.APIError)
+		if !ok {
+			return err
+		}
+		// Confirm error code is what we want
+		if ec2err.Code != "InvalidGroup.NotFound" {
+			return err
+		}
+	}
 
-        return nil
+	return nil
 }
 
 func testAccCheckAWSSecurityGroupRuleExists(n string, group *ec2.SecurityGroup) resource.TestCheckFunc {
-        return func(s *terraform.State) error {
-                rs, ok := s.RootModule().Resources[n]
-                if !ok {
-                        return fmt.Errorf("Not found: %s", n)
-                }
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("Not found: %s", n)
+		}
 
-                if rs.Primary.ID == "" {
-                        return fmt.Errorf("No Security Group is set")
-                }
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No Security Group is set")
+		}
 
-                conn := testAccProvider.Meta().(*AWSClient).ec2conn
-                req := &ec2.DescribeSecurityGroupsInput{
-                        GroupIDs: []*string{aws.String(rs.Primary.ID)},
-                }
-                resp, err := conn.DescribeSecurityGroups(req)
-                if err != nil {
-                        return err
-                }
+		conn := testAccProvider.Meta().(*AWSClient).ec2conn
+		req := &ec2.DescribeSecurityGroupsInput{
+			GroupIDs: []*string{aws.String(rs.Primary.ID)},
+		}
+		resp, err := conn.DescribeSecurityGroups(req)
+		if err != nil {
+			return err
+		}
 
-                if len(resp.SecurityGroups) > 0 && *resp.SecurityGroups[0].GroupID == rs.Primary.ID {
-                        *group = *resp.SecurityGroups[0]
-                        return nil
-                }
+		if len(resp.SecurityGroups) > 0 && *resp.SecurityGroups[0].GroupID == rs.Primary.ID {
+			*group = *resp.SecurityGroups[0]
+			return nil
+		}
 
-                return fmt.Errorf("Security Group not found")
-        }
+		return fmt.Errorf("Security Group not found")
+	}
 }
 
 func testAccCheckAWSSecurityGroupRuleAttributes(group *ec2.SecurityGroup, ruleType string) resource.TestCheckFunc {
-        return func(s *terraform.State) error {
-                p := &ec2.IPPermission{
-                        FromPort:   aws.Long(80),
-                        ToPort:     aws.Long(8000),
-                        IPProtocol: aws.String("tcp"),
-                        IPRanges:   []*ec2.IPRange{&ec2.IPRange{CIDRIP: aws.String("10.0.0.0/8")}},
-                }
-                var rules []*ec2.IPPermission
-                if ruleType == "ingress" {
-                        rules = group.IPPermissions
-                } else {
-                        rules = group.IPPermissionsEgress
-                }
+	return func(s *terraform.State) error {
+		p := &ec2.IPPermission{
+			FromPort:   aws.Long(80),
+			ToPort:     aws.Long(8000),
+			IPProtocol: aws.String("tcp"),
+			IPRanges:   []*ec2.IPRange{&ec2.IPRange{CIDRIP: aws.String("10.0.0.0/8")}},
+		}
+		var rules []*ec2.IPPermission
+		if ruleType == "ingress" {
+			rules = group.IPPermissions
+		} else {
+			rules = group.IPPermissionsEgress
+		}
 
-                if len(rules) == 0 {
-                        return fmt.Errorf("No IPPerms")
-                }
+		if len(rules) == 0 {
+			return fmt.Errorf("No IPPerms")
+		}
 
-                // Compare our ingress
-                if !reflect.DeepEqual(rules[0], p) {
-                        return fmt.Errorf(
-                                "Got:\n\n%#v\n\nExpected:\n\n%#v\n",
-                                rules[0],
-                                p)
-                }
+		// Compare our ingress
+		if !reflect.DeepEqual(rules[0], p) {
+			return fmt.Errorf(
+				"Got:\n\n%#v\n\nExpected:\n\n%#v\n",
+				rules[0],
+				p)
+		}
 
-                return nil
-        }
+		return nil
+	}
 }
 
 const testAccAWSSecurityGroupRuleIngressConfig = `
