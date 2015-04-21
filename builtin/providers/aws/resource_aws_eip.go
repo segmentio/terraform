@@ -102,8 +102,8 @@ func resourceAwsEipRead(d *schema.ResourceData, meta interface{}) error {
 	domain := resourceAwsEipDomain(d)
 	id := d.Id()
 
-	assocIds := []*string{}
-	publicIps := []*string{}
+	var publicIps []*string
+	var assocIds []*string
 	if domain == "vpc" {
 		assocIds = []*string{aws.String(id)}
 	} else {
