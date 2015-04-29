@@ -105,6 +105,9 @@ func Provider() terraform.ResourceProvider {
 			"aws_vpc":                          resourceAwsVpc(),
 			"aws_vpc_peering_connection":       resourceAwsVpcPeeringConnection(),
 			"aws_vpn_gateway":                  resourceAwsVpnGateway(),
+			"aws_ecs_cluster":                  resourceAwsEcsCluster(),
+			"aws_ecs_task_definition":          resourceAwsEcsTaskDefinition(),
+			"aws_ecs_service":                  resourceAwsEcsService(),
 		},
 
 		ConfigureFunc: providerConfigure,

@@ -10,6 +10,7 @@ import (
 	"github.com/awslabs/aws-sdk-go/aws"
 	"github.com/awslabs/aws-sdk-go/service/autoscaling"
 	"github.com/awslabs/aws-sdk-go/service/ec2"
+	"github.com/awslabs/aws-sdk-go/service/ecs"
 	"github.com/awslabs/aws-sdk-go/service/elasticache"
 	"github.com/awslabs/aws-sdk-go/service/elb"
 	"github.com/awslabs/aws-sdk-go/service/iam"
@@ -38,6 +39,7 @@ type AWSClient struct {
 	rdsconn         *rds.RDS
 	iamconn         *iam.IAM
 	elasticacheconn *elasticache.ElastiCache
+	ecsconn         *ecs.ECS
 }
 
 // Client configures and returns a fully initailized AWSClient
@@ -100,6 +102,9 @@ func (c *Config) Client() (interface{}, error) {
 
 		log.Println("[INFO] Initializing Elasticache Connection")
 		client.elasticacheconn = elasticache.New(awsConfig)
+
+		log.Println("[INFO] Initializing ECS Connection")
+		client.ecsconn = ecs.New(awsConfig)
 	}
 
 	if len(errs) > 0 {
